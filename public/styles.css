@@ -1,0 +1,207 @@
+/**
+ * BanishTV - Custom Stylesheet
+ *
+ * Combines Tailwind utilities with custom CSS variables, dark/light mode support,
+ * micro-animations, accessible focus states, and polished TV dashboard aesthetics.
+ * Fully responsive with smooth transitions.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+
+:root {
+    --primary: 262 83 67;
+    --accent: 165 243 252;
+    --background: 9 9 11;
+    --card: 24 24 27;
+    --card-foreground: 244 244 245;
+    --border: 39 39 42;
+    --ring: 167 139 250;
+    --radius: 1.5rem;
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: light) {
+    :root:not(.dark) {
+        --primary: 262 83 67;
+        --accent: 103 232 249;
+        --background: 250 250 250;
+        --card: 255 255 255;
+        --card-foreground: 15 23 42;
+        --border: 228 228 231;
+    }
+}
+
+.dark {
+    --background: 9 9 11;
+    --card: 24 24 27;
+    --card-foreground: 244 244 245;
+    --border: 39 39 42;
+}
+
+.tail-container {
+    font-family: 'Inter', system_ui, sans-serif;
+}
+
+.logo-font {
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Base layout and cards */
+body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--card-foreground));
+}
+
+.card {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    transition: var(--transition);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    border-color: rgb(167 139 250);
+}
+
+/* Micro animations for progress and status */
+.progress {
+    height: 3px;
+    background: linear-gradient(90deg, 
+        hsl(var(--ring)) 0%, 
+        hsl(var(--accent)) 50%, 
+        hsl(var(--ring)) 100%);
+    background-size: 200% 100%;
+    animation: progressSweep 1.8s linear infinite;
+    border-radius: 9999px;
+}
+
+@keyframes progressSweep {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Accessible focus rings */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+    outline: 3px solid rgb(var(--ring));
+    outline-offset: 4px;
+    border-radius: calc(var(--radius) - 2px);
+}
+
+input:focus {
+    border-color: rgb(167 139 250);
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.3);
+}
+
+/* Terminal / log window */
+.terminal {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(163 163 163) hsl(var(--card));
+}
+
+.terminal::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+.terminal::-webkit-scrollbar-thumb {
+    background-color: rgb(163 163 163);
+    border-radius: 20px;
+}
+
+.log-line {
+    animation: logFadeIn 0.35s ease forwards;
+}
+
+@keyframes logFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Toggle switches */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #3f3f46;
+    transition: var(--transition);
+    border-radius: 9999px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: var(--transition);
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: rgb(167 139 250);
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* Status pills */
+.status-pill {
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+}
+
+/* Button hover states */
+.btn-primary {
+    transition: var(--transition);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgb(167 139 250 / 0.3);
+}
+
+/* Footer and small text */
+.text-mono {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Ensure smooth theme transitions */
+html {
+    transition: background-color .4s cubic-bezier(0.4, 0, 0.2, 1);
+}

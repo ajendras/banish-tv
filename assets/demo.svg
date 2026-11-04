@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="572" viewBox="0 0 900 572" role="img" aria-label="BanishTV — demo">
+  <style>
+    text{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;font-size:15px}
+    .l{opacity:0}
+    .ty{clip-path:inset(0 100% 0 0)}
+    .cur{animation:blink 1s steps(1) infinite}
+    @keyframes show{to{opacity:1}}
+    @keyframes type{to{clip-path:inset(0 0 0 0)}}
+    @keyframes blink{50%{opacity:0}}
+    @media (prefers-reduced-motion:reduce){.l{opacity:1;animation:none!important}.ty{clip-path:none;animation:none!important}}
+  </style>
+  <rect width="900" height="572" rx="14" fill="#0d1117"/>
+  <rect x=".5" y=".5" width="899" height="572" rx="14" fill="none" stroke="#30363d"/>
+  <rect width="900" height="40" rx="14" fill="#161b22"/><rect y="26" width="900" height="14" fill="#161b22"/>
+  <circle cx="24" cy="20" r="6" fill="#ff5f57"/><circle cx="44" cy="20" r="6" fill="#febc2e"/><circle cx="64" cy="20" r="6" fill="#28c840"/>
+  <text x="450" y="25" text-anchor="middle" fill="#8b949e" style="font-size:13px">BanishTV — demo</text>
+<text x="28" y="74" class="l" style="animation:show .01s 0.60s forwards"><tspan fill="#67e8f9">❯</tspan></text><text x="50" y="74" class="l ty" style="animation:show .01s 0.60s forwards,type 1.62s steps(36) 0.60s forwards" fill="#e5e7eb">php bin/banish discover 192.168.1.87</text>
+<text x="50" y="100" class="l" style="animation:show .01s 2.52s forwards" fill="#94a3b8">Connected to Xiaomi TV Stick • Android 11</text>
+<text x="50" y="126" class="l" style="animation:show .01s 2.74s forwards" fill="#94a3b8">Recommended profile: xiaomi-2022 (31 packages)</text>
+<text x="50" y="152" class="l" style="animation:show .01s 2.96s forwards" fill="#94a3b8">4 potential user apps detected, 0 critical services at risk</text>
+<text x="28" y="204" class="l" style="animation:show .01s 3.53s forwards"><tspan fill="#67e8f9">❯</tspan></text><text x="50" y="204" class="l ty" style="animation:show .01s 3.53s forwards,type 2.20s steps(49) 3.53s forwards" fill="#e5e7eb">php bin/banish analyze --profile=xiaomi --dry-run</text>
+<text x="50" y="230" class="l" style="animation:show .01s 6.03s forwards" fill="#94a3b8">Dry-run completed in 4.2 s</text>
+<text x="50" y="256" class="l" style="animation:show .01s 6.25s forwards" fill="#94a3b8">Will disable 27 bloat packages and 3 services</text>
+<text x="50" y="282" class="l" style="animation:show .01s 6.47s forwards" fill="#94a3b8">Lumi launcher will replace default home • 0 risky actions</text>
+<text x="28" y="334" class="l" style="animation:show .01s 7.04s forwards"><tspan fill="#67e8f9">❯</tspan></text><text x="50" y="334" class="l ty" style="animation:show .01s 7.04s forwards,type 0.90s steps(20) 7.04s forwards" fill="#e5e7eb">php bin/banish apply</text>
+<text x="50" y="360" class="l" style="animation:show .01s 8.24s forwards" fill="#94a3b8">Created full backup at backups/2025-04-05_1432.tar</text>
+<text x="50" y="386" class="l" style="animation:show .01s 8.46s forwards" fill="#94a3b8">Applied profile: 27 packages disabled</text>
+<text x="50" y="412" class="l" style="animation:show .01s 8.68s forwards" fill="#94a3b8">Lumi Launcher installed and set as default home</text>
+<text x="28" y="464" class="l" style="animation:show .01s 9.25s forwards"><tspan fill="#67e8f9">❯</tspan></text><text x="50" y="464" class="l ty" style="animation:show .01s 9.25s forwards,type 2.03s steps(45) 9.25s forwards" fill="#e5e7eb">curl -s http://localhost:8080/api/status | jq</text>
+<text x="50" y="490" class="l" style="animation:show .01s 11.58s forwards" fill="#94a3b8">{</text>
+<text x="50" y="516" class="l" style="animation:show .01s 11.80s forwards" fill="#94a3b8">&quot;tv_ip&quot;: &quot;192.168.1.87&quot;,</text>
+<g class="l" style="animation:show .01s 12.02s forwards"><text x="28" y="542" fill="#67e8f9">❯</text><rect class="cur" x="50" y="527" width="10" height="18" fill="#e5e7eb"/></g>
+</svg>

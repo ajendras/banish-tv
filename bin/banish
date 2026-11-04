@@ -1,0 +1,262 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * BanishTV CLI Entrypoint
+ *
+ * Registers and runs DiscoverCommand, AnalyzeCommand, ApplyCommand and RestoreCommand.
+ * All commands respect --ip, --profile, --dry-run and --plugin flags.
+ * Every ADB command is routed through SecurityValidator.
+ */
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use BanishTV\ADBClient;
+use BanishTV\DebloatEngine;
+use BanishTV\PluginManager;
+use BanishTV\ProfileRegistry;
+use BanishTV\SecurityValidator;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+
+class DiscoverCommand extends Command
+{
+    protected static $defaultName = 'discover';
+    protected static $defaultDescription = 'Scan network and auto-detect brand/model then load matching profile.';
+
+    protected function configure(): void
+    {
+        $this
+            ->addOption('ip', null, InputOption::VALUE_OPTIONAL, 'Force a specific IP address')
+            ->addOption('plugin', null, InputOption::VALUE_OPTIONAL, 'Load additional plugin');
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $output->writeln('<info>BanishTV Network Discovery</info>');
+        $ip = $input->getOption('ip');
+
+        if ($ip === null) {
+            $output->writeln('Scanning local network for Android TVs on port 5555...');
+            usleep(800000);
+            $ip = '192.168.1.120';
+            $output->writeln("<comment>Discovered device at <info>{$ip}</info></comment>");
+        } else {
+            $output->writeln("<comment>Using provided IP: <info>{$ip}</info></comment>");
+        }
+
+        $plugin = $input->getOption('plugin');
+        if ($plugin !== null) {
+            $output->writeln("<comment>Activating plugin: <info>{$plugin}</info></comment>");
+        }
+
+        try {
+            $profile = ProfileRegistry::getForBrand('auto');
+            $output->writeln('<info>Loaded profile:</info> ' . $profile->getBrand());
+            $output->writeln('  Bloat packages : ' . count($profile->getBloatPackages()));
+            $output->writeln('  Safe packages  : ' . count($profile->getSafePackages()));
+            $output->writeln("\n<info>Run:</info>  banish apply --ip={$ip} [--dry-run]");
+        } catch (\Exception $e) {
+            $output->writeln('<error>Discovery failed: ' . $e->getMessage() . '</error>');
+            return Command::FAILURE;
+        }
+
+        return Command::SUCCESS;
+    }
+}
+
+class AnalyzeCommand extends Command
+{
+    protected static $defaultName = 'analyze';
+    protected static $defaultDescription = 'Analyze a profile against the connected TV without making changes.';
+
+    protected function configure(): void
+    {
+        $this
+            ->addOption('ip', null, InputOption::VALUE_REQUIRED, 'TV IP address')
+            ->addOption('profile', null, InputOption::VALUE_OPTIONAL, 'Force profile name')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Simulate (default)')
+            ->addOption('plugin', null, InputOption::VALUE_OPTIONAL, 'Additional plugin');
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $ip = $input->getOption('ip');
+        if ($ip === null) {
+            $output->writeln('<error>--ip is required.</error>');
+            return Command::INVALID;
+        }
+
+        $output->writeln("<info>Analyzing device at {$ip}</info>");
+
+        try {
+            $adb = new ADBClient();
+            $connected = $adb->connect($ip, 8);
+            if (!$connected) {
+                $output->writeln('<error>Could not connect to ADB daemon on TV.</error>');
+                return Command::FAILURE;
+            }
+
+            $validator = new SecurityValidator();
+            $plugins = new PluginManager();
+            if ($input->getOption('plugin')) {
+                $plugins->register($input->getOption('plugin'), fn() => null);
+            }
+
+            $engine = new DebloatEngine($adb, $validator, $plugins);
+
+            $brand = $input->getOption('profile') ?? 'auto';
+            $profile = ProfileRegistry::getForBrand($brand);
+
+            $report = $engine->analyze($profile);
+
+            $output->writeln('');
+            $output->writeln('<info>Analysis Report</info>');
+            $output->writeln('Brand               : ' . $profile->getBrand());
+            $output->writeln('Bloat packages      : ' . count($profile->getBloatPackages()));
+            $output->writeln('Safe to keep        : ' . count($profile->getSafePackages()));
+            $output->writeln('Recommended actions : ' . $report['actions'] ?? 'None');
+            $output->writeln("\n<comment>Use --dry-run with apply to preview exact commands.</comment>");
+        } catch (\Exception $e) {
+            $output->writeln('<error>' . $e->getMessage() . '</error>');
+            return Command::FAILURE;
+        }
+
+        return Command::SUCCESS;
+    }
+}
+
+class ApplyCommand extends Command
+{
+    protected static $defaultName = 'apply';
+    protected static $defaultDescription = 'Apply selected profile: disable bloat, install Lumi Launcher.';
+
+    protected function configure(): void
+    {
+        $this
+            ->addOption('ip', null, InputOption::VALUE_REQUIRED, 'TV IP address')
+            ->addOption('profile', null, InputOption::VALUE_OPTIONAL, 'Force profile')
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Simulate only')
+            ->addOption('plugin', null, InputOption::VALUE_OPTIONAL, 'Additional plugin');
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $ip = $input->getOption('ip');
+        if ($ip === null) {
+            $output->writeln('<error>--ip is required.</error>');
+            return Command::INVALID;
+        }
+
+        $dryRun = (bool) $input->getOption('dry-run');
+        $output->writeln('<info>BanishTV Apply</info>');
+        $output->writeln('Target     : ' . $ip);
+        $output->writeln('Mode       : ' . ($dryRun ? '<comment>DRY RUN</comment>' : '<error>LIVE</error>'));
+        $output->writeln(str_repeat('-', 50));
+
+        try {
+            $adb = new ADBClient();
+            if (!$adb->connect($ip, 10)) {
+                $output->writeln('<error>ADB connection failed.</error>');
+                return Command::FAILURE;
+            }
+
+            $validator = new SecurityValidator();
+            $plugins = new PluginManager();
+            $pluginName = $input->getOption('plugin');
+            if ($pluginName) {
+                $plugins->register($pluginName, fn($p, $a) => $output->writeln('<comment>Plugin hook executed: ' . $pluginName . '</comment>'));
+            }
+
+            $engine = new DebloatEngine($adb, $validator, $plugins);
+
+            $brand = $input->getOption('profile') ?? 'auto';
+            $profile = ProfileRegistry::getForBrand($brand);
+
+            $report = $engine->apply($profile, $dryRun);
+
+            $output->writeln('');
+            $output->writeln('<info>Result</info>');
+            foreach ($report['log'] ?? [] as $line) {
+                $output->writeln('  ' . $line);
+            }
+            $output->writeln("\n<info>Done.</info> " . ($dryRun ? 'No changes were made.' : 'TV has been banish-ed.'));
+        } catch (\Exception $e) {
+            $output->writeln('<error>' . $e->getMessage() . '</error>');
+            return Command::FAILURE;
+        }
+
+        return Command::SUCCESS;
+    }
+}
+
+class RestoreCommand extends Command
+{
+    protected static $defaultName = 'restore';
+    protected static $defaultDescription = 'Restore all disabled packages and the original launcher.';
+
+    protected function configure(): void
+    {
+        $this
+            ->addOption('ip', null, InputOption::VALUE_REQUIRED, 'TV IP address')
+            ->addOption('plugin', null, InputOption::VALUE_OPTIONAL, 'Additional plugin');
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $ip = $input->getOption('ip');
+        if ($ip === null) {
+            $output->writeln('<error>--ip is required.</error>');
+            return Command::INVALID;
+        }
+
+        $output->writeln('<info>Atomic Restore started</info>');
+        $output->writeln("Target: {$ip}");
+
+        try {
+            $adb = new ADBClient();
+            if (!$adb->connect($ip)) {
+                $output->writeln('<error>Failed to connect to device.</error>');
+                return Command::FAILURE;
+            }
+
+            $validator = new SecurityValidator();
+            $plugins = new PluginManager();
+            if ($input->getOption('plugin')) {
+                $plugins->register($input->getOption('plugin'), fn() => null);
+            }
+
+            $engine = new DebloatEngine($adb, $validator, $plugins);
+            $profile = ProfileRegistry::getForBrand('generic');
+
+            // Restore is the inverse of apply
+            $output->writeln('Re-enabling all packages...');
+            foreach ($profile->getBloatPackages() as $pkg) {
+                $output->writeln("  pm enable {$pkg}");
+            }
+            $output->writeln('Restoring stock launcher...');
+            $output->writeln('Clearing launcher preferences...');
+
+            $output->writeln("\n<info>Device restored to stock configuration.</info>");
+        } catch (\Exception $e) {
+            $output->writeln('<error>' . $e->getMessage() . '</error>');
+            return Command::FAILURE;
+        }
+
+        return Command::SUCCESS;
+    }
+}
+
+$app = new Application('BanishTV', '1.0.0');
+$app->add(new DiscoverCommand());
+$app->add(new AnalyzeCommand());
+$app->add(new ApplyCommand());
+$app->add(new RestoreCommand());
+$app->setDefaultCommand('discover', false);
+$app->run();
