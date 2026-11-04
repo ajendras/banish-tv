@@ -100,7 +100,7 @@ final class DebloatEngine
      * with no modifications made to the device. In live mode the changes are applied
      * atomically.
      *
-     * @return array{success: bool, brand: string, log: list<string>, disabledCount: int, dryRun: bool, message: string}
+     * @return array{success: bool, brand: string, log: list<string>, disabledCount: int, skippedCount: int, dryRun: bool, message: string, launcher: array}
      */
     public function apply(Profile $profile, bool $dryRun = true): array
     {
@@ -146,6 +146,8 @@ final class DebloatEngine
                 } else {
                     $log[] = "  ⚠ Disable command for {$package} returned failure";
                 }
+            } else {
+                $disabledCount++;
             }
         }
 
