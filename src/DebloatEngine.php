@@ -43,8 +43,6 @@ final class DebloatEngine
      */
     public function analyze(Profile $profile): array
     {
-        $this->plugins->beforeApply($profile, $this->adb);
-
         if (!$this->adb->isConnected()) {
             throw new \RuntimeException('ADBClient must be connected before analysis.');
         }
@@ -87,8 +85,6 @@ final class DebloatEngine
                 'Analysis complete — ready for dry-run or live apply',
             ],
         ];
-
-        $this->plugins->afterApply($profile, $this->adb);
 
         return $report;
     }
