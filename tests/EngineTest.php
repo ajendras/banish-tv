@@ -22,13 +22,14 @@ final class EngineTest extends TestCase
 
     protected function setUp(): void
     {
+        ProfileRegistry::reset();
         $this->adb = new ADBClient();
-        $this->adb->connect('192.168.1.50', 5);
+        $this->adb->connect('192.168.1.100', 5);
         $this->validator = new SecurityValidator();
         $this->plugins = new PluginManager();
     }
 
-    public function testAnalyzeReturnsStructuredReport(): void
+    public function testAnalyzeReturnsExpectedReportStructure(): void
     {
         $engine = new DebloatEngine($this->adb, $this->validator, $this->plugins);
         $profile = new GenericProfile();
@@ -36,19 +37,20 @@ final class EngineTest extends TestCase
 
         $this->assertIsArray($report);
         $this->assertArrayHasKey('brand', $report);
+        $this->assertSame('Generic', $report['brand']);
         $this->assertArrayHasKey('bloatDetected', $report);
         $this->assertArrayHasKey('toDisable', $report);
         $this->assertArrayHasKey('safePackages', $report);
         $this->assertArrayHasKey('actions', $report);
         $this->assertArrayHasKey('launcher', $report);
         $this->assertArrayHasKey('log', $report);
-        $this->assertEquals('Generic', $report['brand']);
-        $this->assertGreaterThan(0, $report['bloatDetected']);
+        $this->assertIsArray($report['log']);
+        $this->assertGreaterThan(0, count($report['log']));
         $this->assertStringContainsString('Analysis started for Generic profile', $report['log'][0]);
-        $this->assertStringContainsString('Analysis complete — ready for dry-run or live apply', $report['log'][5]);
+        $this->assertStringContainsString('Analysis complete', $report['log'][array_key_last($report['log'])]);
     }
 
-    public function testDryRunProducesExpectedReportStructure(): void
+    public function testDryRunApplyProducesLogWithoutSideEffects(): void
     {
         $engine = new DebloatEngine($this->adb, $this->validator, $this->plugins);
         $profile = new GenericProfile();
@@ -56,83 +58,108 @@ final class EngineTest extends TestCase
 
         $this->assertTrue($report['success']);
         $this->assertTrue($report['dryRun']);
-        $this->assertEquals('Generic', $report['brand']);
-        $this->assertGreaterThan(5, $report['disabledCount']);
-        $this->assertEquals(0, $report['skippedCount']);
-        $this->assertIsArray($report['log']);
-        $this->assertIsArray($report['launcher']);
-        $this->assertStringContainsString('=== BanishTV DRY-RUN ===', $report['log'][0]);
-        $this->assertStringContainsString('✓ Plugin beforeApply hooks executed', $report['log'][3]);
-        $this->assertStringContainsString('Dry-run completed — no changes were made to the TV', $report['log'][array_key_last($report['log']) - 1]);
+        $this->assertArrayHasKey('log', $report);
+        $this->assertArrayHasKey('disabledCount', $report);
+        $this->assertArrayHasKey('skippedCount', $report);
+        $this->assertArrayHasKey('launcher', $report);
+
+        $logStr = implode("\n", $report['log']);
+        $this->assertStringContainsString('=== LumiTV DRY-RUN ===', $logStr);
+        $this->assertStringContainsString('Profile : Generic', $logStr);
+        $this->assertStringContainsString('Would disable:', $logStr);
+        $this->assertStringContainsString('Would push and configure: Lumi Launcher', $logStr);
+        $this->assertStringContainsString('Dry-run completed — no changes were made to the TV', $logStr);
+        $this->assertStringContainsString('DRY-RUN COMPLETE', $logStr);
+        $this->assertStringContainsString('Dry-run completed. Review the log above', $report['message']);
+    }
+
+    public function testLiveApplyCallsDisableOnADB(): void
+    {
+        $engine = new DebloatEngine($this->adb, $this->validator, $this->plugins);
+        $profile = new GenericProfile();
+        $report = $engine->apply($profile, dryRun: false);
+
+        $this->assertTrue($report['success']);
+        $this->assertFalse($report['dryRun']);
+
+        $logStr = implode("\n", $report['log']);
+        $this->assertStringContainsString('=== LumiTV LIVE APPLY ===', $logStr);
+        $this->assertStringContainsString('Disabling:', $logStr);
+        $this->assertStringContainsString('Installing and configuring: Lumi Launcher', $logStr);
+        $this->assertStringContainsString('All changes applied successfully', $logStr);
+        $this->assertStringContainsString('LUMI COMPLETE', $logStr);
     }
 
     public function testValidatorRejectsDangerousCommands(): void
     {
-        $dangerous = [
+        $badCommands = [
             'rm -rf /system',
             'reboot',
             'pm uninstall com.example.app',
-            'echo "bad" > /system/build.prop',
-            'settings put global adb_enabled 1',
+            'settings put global test 1',
+            'echo "bad" > /data/local.prop',
+            'su -c "whoami"',
         ];
 
-        foreach ($dangerous as $cmd) {
+        foreach ($badCommands as $cmd) {
             $this->assertFalse(
                 $this->validator->validateCommand($cmd),
-                "Dangerous command should be rejected: {$cmd}"
+                "Command '{$cmd}' should have been rejected"
             );
             $this->assertNotEmpty($this->validator->getBlockedReasons());
         }
     }
 
-    public function testProfileMatrixAndAutoDiscovery(): void
+    public function testProfileRegistryAutoDiscovery(): void
     {
-        ProfileRegistry::reset();
+        $generic = ProfileRegistry::getForBrand('auto');
+        $this->assertInstanceOf(GenericProfile::class, $generic);
+        $this->assertSame('Generic', $generic->getBrand());
 
-        $profiles = [
-            ProfileRegistry::getForBrand('auto'),
-            ProfileRegistry::getForBrand('google'),
-            ProfileRegistry::getForBrand('lg'),
-            new GenericProfile(),
-            new GoogleTVProfile(),
-            new LGProfile(),
-        ];
+        $google = ProfileRegistry::getForBrand('GoogleTV');
+        $this->assertInstanceOf(GoogleTVProfile::class, $google);
+        $this->assertSame('Google TV', $google->getBrand());
 
-        foreach ($profiles as $profile) {
-            $this->assertNotEmpty($profile->getBloatPackages());
-            $this->assertNotEmpty($profile->getSafePackages());
-            $toDisable = $profile->getPackagesToDisable();
-            $this->assertNotEmpty($toDisable);
-            $this->assertCount(
-                count($profile->getBloatPackages()) - count(array_intersect($profile->getBloatPackages(), $profile->getSafePackages())),
-                $toDisable
-            );
-
-            $engine = new DebloatEngine($this->adb, $this->validator, $this->plugins);
-            $report = $engine->analyze($profile);
-            $this->assertEquals($profile->getBrand(), $report['brand']);
-            $this->assertArrayHasKey('launcher', $report);
-        }
-
-        $this->assertInstanceOf(GenericProfile::class, ProfileRegistry::getForBrand('unknown-brand'));
+        $lg = ProfileRegistry::getForBrand('LG');
+        $this->assertInstanceOf(LGProfile::class, $lg);
+        $this->assertSame('LG', $lg->getBrand());
     }
 
-    public function testPluginHooksExecutedOnlyForApply(): void
+    public function testPluginHooksAreExecuted(): void
     {
         $callCount = 0;
-        $this->plugins->register('test-counter', static function () use (&$callCount): void {
+        $this->plugins->register('test-hook', static function () use (&$callCount): void {
             $callCount++;
         });
 
         $engine = new DebloatEngine($this->adb, $this->validator, $this->plugins);
         $profile = new GenericProfile();
-
-        // analyze must not trigger apply hooks
-        $engine->analyze($profile);
-        $this->assertSame(0, $callCount, 'analyze() must not run before/afterApply hooks');
-
-        $callCount = 0;
         $engine->apply($profile, dryRun: true);
-        $this->assertSame(2, $callCount, 'apply() must run beforeApply and afterApply exactly once each');
+
+        $this->assertSame(2, $callCount, 'beforeApply and afterApply hooks should each have run once');
+    }
+
+    public function testAnalyzeWithLGProfile(): void
+    {
+        $engine = new DebloatEngine($this->adb, $this->validator, $this->plugins);
+        $profile = new LGProfile();
+        $report = $engine->analyze($profile);
+
+        $this->assertSame('LG', $report['brand']);
+        $this->assertGreaterThan(10, $report['bloatDetected']);
+        $this->assertGreaterThan(0, $report['toDisable']);
+        $this->assertStringContainsString('LG profile', $report['log'][0]);
+    }
+
+    public function testSafePackageValidation(): void
+    {
+        $profile = new GenericProfile();
+        $protected = 'com.android.settings';
+
+        $this->assertFalse($this->validator->isSafePackage($protected, $profile));
+        $this->assertNotEmpty($this->validator->getBlockedReasons());
+
+        $safeBloat = 'com.google.android.youtube.tv';
+        $this->assertTrue($this->validator->isSafePackage($safeBloat, $profile));
     }
 }

@@ -45,7 +45,7 @@ final class ApiController
             'ip' => $ip,
             'profile' => [
                 'brand' => $brand,
-                'description' => (new ProfileRegistry())->getForBrand($brand)->getDescription(),
+                'description' => ProfileRegistry::getForBrand($brand)->getDescription(),
             ],
             'plugins' => (new PluginManager())->getRegisteredPlugins(),
         ];
