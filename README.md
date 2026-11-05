@@ -19,9 +19,9 @@
 </div>
 <!-- header:end -->
 
-## ✨ Why BanishTV?
+## ✨ Why LumiTV?
 
-Smart TVs ship with aggressive bloat, telemetry, and intrusive launchers that hurt privacy and performance. Existing tools rely on unpredictable LLM prompts that can suggest unsafe `rm`, `reboot`, or `factory reset` commands. BanishTV ships with tested brand profiles, a polished local-first web UI, strict command validation that blocks dangerous actions by default, a plugin architecture for extensions, and real PHPUnit coverage. It is built for tinkerers and privacy enthusiasts who want reproducible, auditable results without writing shell scripts.
+Smart TVs ship with aggressive bloat, telemetry, and intrusive launchers that hurt privacy and performance. Existing tools rely on unpredictable LLM prompts that can suggest unsafe `rm`, `reboot`, or `factory reset` commands. LumiTV ships with tested brand profiles, a polished local-first web UI, strict command validation that blocks dangerous actions by default, a plugin architecture for extensions, and real PHPUnit coverage. It is built for tinkerers and privacy enthusiasts who want reproducible, auditable results without writing shell scripts.
 
 - **Auto Discovery** instantly scans the network, identifies the TV brand/model, and loads the matching vetted profile.
 - **Security Guard** statically validates every ADB command against a strict whitelist before execution.

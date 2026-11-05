@@ -1,6 +1,6 @@
 {
-    "name": "banish-tv/banish-tv",
-    "description": "Removes bloatware and telemetry from any Android/Google TV over Wi-Fi, installs a minimal Apple-TV-style launcher, and provides a secure local web dashboard with pluggable profiles.",
+    "name": "lumitv/lumitv",
+    "description": "LumiTV removes bloatware and telemetry from any Android/Google TV over Wi-Fi, installs a minimal Apple-TV-style launcher, and provides a secure local web dashboard with pluggable profiles.",
     "license": "MIT",
     "require": {
         "php": "^8.2",

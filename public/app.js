@@ -1,5 +1,5 @@
 /**
- * BanishTV - Frontend Application (Alpine.js + Vanilla JS)
+ * LumiTV - Frontend Application (Alpine.js + Vanilla JS)
  *
  * Manages TV connection form, live log streaming via repeated fetch,
  * toggle switches, theme switcher with persistence, and smooth transitions.
@@ -283,4 +283,4 @@ function banishApp() {
 window.banishApp = banishApp;
 
 // Debug helper
-console.log('%cBanishTV app.js loaded — live log streaming active', 'color:#a5f3fc;font-family:monospace;font-size:10px');
+console.log('%cLumiTV app.js loaded — live log streaming active', 'color:#a5f3fc;font-family:monospace;font-size:10px');

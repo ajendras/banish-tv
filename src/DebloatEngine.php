@@ -8,7 +8,7 @@ namespace BanishTV;
  * DebloatEngine
  *
  * Core orchestration engine that analyzes a Profile against the connected TV
- * and applies vetted changes. Every ADB command is passed through SecurityValidator.
+ * and applies vetted changes for the LumiTV project. Every ADB command is passed through SecurityValidator.
  * Dry-run mode produces an exact command log with zero side-effects. Plugin
  * hooks are executed at defined points for extensibility.
  */
@@ -105,7 +105,7 @@ final class DebloatEngine
         }
 
         $log = [];
-        $log[] = '=== BanishTV ' . ($dryRun ? 'DRY-RUN' : 'LIVE APPLY') . ' ===';
+        $log[] = '=== LumiTV ' . ($dryRun ? 'DRY-RUN' : 'LIVE APPLY') . ' ===';
         $log[] = 'Profile : ' . $profile->getBrand();
         $log[] = 'Started : ' . date('Y-m-d H:i:s');
 
@@ -175,7 +175,7 @@ final class DebloatEngine
             ? '  • Dry-run completed — no changes were made to the TV'
             : '  • All changes applied successfully. Reboot recommended.';
 
-        $log[] = '=== ' . ($dryRun ? 'DRY-RUN COMPLETE' : 'BANISH COMPLETE') . ' ===';
+        $log[] = '=== ' . ($dryRun ? 'DRY-RUN COMPLETE' : 'LUMI COMPLETE') . ' ===';
 
         return [
             'success' => true,
@@ -186,7 +186,7 @@ final class DebloatEngine
             'dryRun' => $dryRun,
             'message' => $dryRun
                 ? 'Dry-run completed. Review the log above for exact changes that would be made.'
-                : 'Profile applied successfully. Your TV is now banish-ed.',
+                : 'Profile applied successfully. Your TV is now lumi-fied.',
             'launcher' => $launcherConfig,
         ];
     }
